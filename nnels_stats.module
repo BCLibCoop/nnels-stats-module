@@ -9,5 +9,7 @@
  *   4 (blocked account).
  */
 function nnels_stats_calsauthen_login_failed($reason) {
-  dd($reason, 'Hello from hook_calsauthen_login_failed');
+  dd($_SESSION['calsauthen_target_organization'], 'Org');
+  dd($_SESSION['calsauthen_target_driver'], 'Driver');
+  dd($reason, 'Reason');
 }
