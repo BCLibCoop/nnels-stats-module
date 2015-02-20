@@ -1,0 +1,3 @@
+name = NNELS Statistics
+description = Captures failed logins.
+core = 7.x

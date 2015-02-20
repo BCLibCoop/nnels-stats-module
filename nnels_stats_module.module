@@ -1,0 +1,13 @@
+<?php
+
+/**
+ * Implements hook_calsauthen_login_failed.
+ *
+ * @param string $reason
+ *   The reason that the user's login attempt failed. Should be on of
+ *   1 (username unknown), 2 (bad password), 3 (invalid patron type),
+ *   4 (blocked account).
+ */
+function nnels_stats_module_calsauthen_login_failed($reason) {
+  dd($reason, 'Hello from hook_calsauthen_login_failed');
+}
