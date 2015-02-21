@@ -1,5 +1,22 @@
 <?php
 
+
+/**
+ * Implements hook_menu().
+ */
+function nnels_stats_menu() {
+  $items = array();
+  return $items;
+}
+
+/**
+ * Implements hook_init().
+ */
+function nnels_stats_init() {
+  _nnels_stats_tracker();
+}
+
+
 /**
  * Implements hook_calsauthen_login_failed.
  *
@@ -12,4 +29,262 @@ function nnels_stats_calsauthen_login_failed($reason) {
   dd($_SESSION['calsauthen_target_organization'], 'Org');
   dd($_SESSION['calsauthen_target_driver'], 'Driver');
   dd($reason, 'Reason');
+}
+
+
+/**
+ * Implements hook_views_api().
+ */
+function nnels_stats_views_api() {
+    return array(
+        'api' => 3,
+        'path' => drupal_get_path('module', 'nnels_stats') . '/includes/views',
+    );
+}
+
+/** 
+ * Implements hook_form_alter(). 
+ */ 
+function nnels_stats_form_alter(&$form, &$form_state, $form_id) {
+
+}
+
+
+/**
+ * populates db
+ *
+ * @param array $arr
+ *
+ * @return integer $statid
+ *  the primary key from the db insert
+ *   
+ */
+function _nnels_add_stat($arr) {
+  	$statid = db_insert('nnels_stats')
+		  ->fields(array(
+		    'authen_type' => $arr['url_type'],
+		    'authen_success' => $arr['authen_success'],
+		    'authen_failure_reason' => 0,
+		    'orgid' => $arr['orgid'],
+		    'referring_url_type' => $arr['url_type'],
+		    'created' => REQUEST_TIME,
+		  ))
+		  ->execute();
+		drupal_set_message("AYAH, the statid = $statid");
+	  return $statid;
+}
+
+
+
+/**
+ * the main stats tracker
+ *
+ * @return
+ *   tba
+ * @todo
+ *   lots to do here, like lots
+ */
+function _nnels_stats_tracker() {
+
+  global $user;
+	
+	//does the session exist?  
+  $session_exists = (isset($_SESSION['nnels_stats']) ) ? TRUE : FALSE;
+  
+  //get the referring URL
+  $ref = nnels_stats_get_referrer();
+  $referring_url_type = nnels_stats_get_url_type($ref);
+
+  $orgid = 0;
+  $target_orgid = 0;
+	if(isset($_SESSION['calsauthen_target_organization'])) $target_orgid = $_SESSION['calsauthen_target_organization'];
+
+  //empty referring URL, no session:
+  if($pos === FALSE && empty($ref)) {
+  	if($user->uid > 0) {
+  	  dpm($user);
+  		$orgid = nnels_stats_get_org_by_uid($user->uid);
+  	}
+  	$arr = array(
+		  'referrer' => $ref,
+		  'url_type' => 1,
+			'authen_success' => 88,
+	  	'orgid' => $orgid,
+		  'target_orgid' => $target_orgid,
+  	);
+		$statid = _nnels_add_stat($arr); 
+		if($user->uid < 1) {
+	  	$arr['statid'] = $statid;
+	  	$_SESSION['nnels_stats'] = $arr;
+		  
+		}
+    //unset($_SESSION['nnels_stats']); 
+		return;
+
+  }
+  
+  if ($referring_url_type === 4 && $session_exists === FALSE) {
+	  dpm("we don't track this");
+    return;
+  }
+  if($user->uid > 0 && $session_exists === TRUE) {
+    drupal_set_message("KILL THE SESSION!");
+    unset($_SESSION['nnels_stats']);
+  
+  }
+  //returning users, but already logged in: don't need a session to track pages.
+  if(!empty($ref) && $user->uid > 0) {
+  
+		$orgid = nnels_stats_get_org_by_uid($user->uid);
+		$target_orgid = $orgid;
+  	$arr = array(
+  	  'referrer' => $ref,
+  	  'url_type' => 2, //why??
+  	  'orgid' => $orgid,
+  	  'target_orgid' => $target_orgid,
+  	  'authen_success' => 88,
+  	);
+		_nnels_add_stat($arr);  
+		return;
+  }  
+  
+  //returning users, not logged in, if session is false, create one.
+	//unset($_SESSION['nnels_stats']);
+  if(!empty($ref) && $session_exists === FALSE && $user->uid < 1) {
+		//check org id if no session variable
+		if($target_orgid === 0) $target_orgid = _nnels_stats_get_org_by_referring_url($ref);
+		$orgid = $target_orgid;  
+	
+  	$arr = array(
+  	  'referrer' => $ref,
+  	  'url_type' => 2, //why??
+  	  'orgid' => $orgid,
+  	  'target_orgid' => $target_orgid,
+  	  'pages' => array(),
+  	  'statid' => 0,
+  	);
+  	$arr['statid'] = _nnels_add_stat($arr);
+		$_SESSION['nnels_stats'] = $arr;
+  }
+	$tmp = strpos(drupal_get_path_alias(), "user/login");
+	if($tmp !== FALSE) {
+	  drupal_set_message("on login page?? = $tmp");
+	  if(!$_SESSION['nnels_stats']['login_attempts']) $_SESSION['nnels_stats']['login_attempts'] = 0;
+	  $_SESSION['nnels_stats']['login_attempts']++;
+	
+	}
+	 
+  
+  if( isset($_SESSION['nnels_stats']) ) {
+    $_SESSION['nnels_stats']['pages'][] = check_plain(request_uri()); //should use check_plain()?
+    //dpm($_SESSION['nnels_stats']);
+    //if($user->uid < 1) _nnels_add_stat($_SESSION['nnels_stats']);
+  }  
+  drupal_set_message(__METHOD__ . ": pos = $pos | REFERRING URL = " . $ref . " | UID = " . $user->uid . " | session_exists = " . $session_exists);
+	dpm($_SESSION);  
+
+
+}
+
+/**
+ * Get referring URL type.
+ *
+ * @param string $url
+ *   the referring url
+ * @return
+ *   integer - the url type: 1 thru 4
+ */
+function nnels_stats_get_url_type($url) {
+	//referring url types: 1 = blank / direct; 2 = external (not partner); 3 = referring (partner); 4 = site?
+	global $user;
+	
+	if(!empty($ref) && $user->uid > 0) return 2;
+	
+  $type = 1;
+  $pos = strpos($url, "cals_dev");
+  if($pos !== FALSE) {
+    return 4; //ignore this, don't create a session
+  }
+  if(empty($ref)) {
+    return 1; //
+  }
+  return 4; //site
+}
+
+/**
+ * Get user agent.
+ *
+ * @return
+ *   string user agent, or empty string if user agent does not exist
+ */
+function nnels_stats_get_user_agent() {
+  return isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : '';
+}
+
+/**
+ * Get user agent.
+ *
+ * @return
+ *   string referring URL
+ */
+function nnels_stats_get_referrer() {
+  return isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : '';
+}
+function _nnels_stats_get_org_by_referring_url($referring_url) {
+
+	$target = db_query("SELECT a.setting_name, a.setting_value 
+    FROM {calsauthentargets} a LEFT JOIN {calsauthentargets} b ON a.nid = b.nid 
+    WHERE b.setting_name = 'referring_url' AND :referring_url_value
+    REGEXP b.setting_value",
+    array(':referring_url_value' => $referring_url)
+  );
+  if ($target->rowCount()) {
+    foreach ($target as $attr) {
+
+      // The node ID of the organization that corresponds to the registered
+      // referring URL.
+      if ($attr->setting_name == 'node') {
+      	return $attr->setting_value;
+      }
+    }
+  }
+	return 0;
+
+}
+
+/**
+ * Get organization NID from $uid.
+ *
+ * @return
+ *   integer node id
+ */
+function nnels_stats_get_org_by_uid($uid) {
+ 
+  $nid = db_query(
+  	"select field_organization_nid 
+  		from {field_data_field_organization} 
+  		where entity_id = :uid and entity_type = :type ", 
+    	array(":uid" => $uid, ":type" => "user") 
+  )->fetchField();
+  if(!$nid) $nid = 0; 
+  return $nid;  
+}
+
+   
+
+/**
+ * Returns information about the default search module.
+ *
+ * @return
+ *    The search_get_info() array element for the default search module, if any.
+ */
+function nnels_stats_get_default_module_info() {
+  $info = nnels_stats_get_info();
+  $default = variable_get('nnels_stats_default_module', 'node');
+  if (isset($info[$default])) {
+    return $info[$default];
+  }
+  // The variable setting does not match any active module, so just return
+  // the info for the first active module (if any).
+  return reset($info);
 }
