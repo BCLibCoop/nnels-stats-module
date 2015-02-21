@@ -1,0 +1,69 @@
+<?php
+/**
+ * @file
+ * Install, update and uninstall functions for the cals external search module.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+function nnels_stats_schema() {
+  $schema['nnels_stats'] = array(
+    'description' => 'captures basic stats.',
+    'fields' => array(
+      'visitid'  => array(
+        'type' => 'serial',
+        'not null' => TRUE,
+        'description' => t('Primary Key: stats row id.'),
+      ),
+      'authen_type' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 1,
+        'description' => t("type of login attempt: 1 = login (returning user); 2 = registration (new user)"),
+      ),
+      'authen_success' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => t("Whether or not the login / registration attempt was successful: 0 = false; 1 = true."),
+      ),
+      'authen_failure_reason' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => t("Enumeration of xxxx."),
+      ),
+      'orgid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => t("The NID of the organization associated with the user."),
+      ),  
+
+      'referring_url_type' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 1,
+        'description' => t("The type of referring URL: 1 = referring URL, 2 = external URL, 3 = direct link"),
+      ),  
+      'created' => array(
+        'description' => 'The Unix timestamp when the node was created.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => time(),
+      ),
+    ),
+    'primary key' => array('visitid'),
+    'indexes' => array(
+      'orgid' => array('orgid'),
+    ),
+  );
+
+  return $schema;
+}
