@@ -55,12 +55,12 @@ function nnels_stats_form_alter(&$form, &$form_state, $form_id) {
  *
  * @param array $arr
  *
- * @return integer $statid
+ * @return integer $visitid
  *  the primary key from the db insert
  *   
  */
 function _nnels_add_stat($arr) {
-  	$statid = db_insert('nnels_stats')
+  	$visitid = db_insert('nnels_stats')
 		  ->fields(array(
 		    'authen_type' => $arr['url_type'],
 		    'authen_success' => $arr['authen_success'],
@@ -70,8 +70,8 @@ function _nnels_add_stat($arr) {
 		    'created' => REQUEST_TIME,
 		  ))
 		  ->execute();
-		drupal_set_message("AYAH, the statid = $statid");
-	  return $statid;
+		//drupal_set_message("AYAH, the $visitid = $visitid");
+	  return $visitid;
 }
 
 
@@ -112,9 +112,9 @@ function _nnels_stats_tracker() {
 	  	'orgid' => $orgid,
 		  'target_orgid' => $target_orgid,
   	);
-		$statid = _nnels_add_stat($arr); 
+		$visitid = _nnels_add_stat($arr); 
 		if($user->uid < 1) {
-	  	$arr['statid'] = $statid;
+	  	$arr['visitid'] = $visitid;
 	  	$_SESSION['nnels_stats'] = $arr;
 		  
 		}
@@ -161,9 +161,9 @@ function _nnels_stats_tracker() {
   	  'orgid' => $orgid,
   	  'target_orgid' => $target_orgid,
   	  'pages' => array(),
-  	  'statid' => 0,
+  	  'visitid' => 0,
   	);
-  	$arr['statid'] = _nnels_add_stat($arr);
+  	$arr['visitid'] = _nnels_add_stat($arr);
 		$_SESSION['nnels_stats'] = $arr;
   }
 	$tmp = strpos(drupal_get_path_alias(), "user/login");
