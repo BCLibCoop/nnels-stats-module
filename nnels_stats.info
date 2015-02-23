@@ -1,3 +1,5 @@
 name = NNELS Statistics
-description = Captures failed logins.
+description = Captures logins and login attempts, including failed ones.
 core = 7.x
+package = --CALS
+dependencies[] = calsauthen
