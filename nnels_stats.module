@@ -21,18 +21,25 @@ function nnels_stats_init() {
 
 
 /**
- * Implements hook_calsauthen_login_failed.
+ * Implements hook_calsauthen_login_result.
  *
+ * @param bool $result
+ *   TRUE if the login was successful, FALSE if not.
  * @param string $reason
  *   The reason that the user's login attempt failed. Should be on of
  *   1 (username unknown), 2 (bad password), 3 (invalid patron type),
  *   4 (blocked account).
  */
-function nnels_stats_calsauthen_login_failed($reason) {
+function nnels_stats_calsauthen_login_result($result, $reason) {
   dd($_SESSION['calsauthen_target_organization'], 'Org');
   dd($_SESSION['calsauthen_target_driver'], 'Driver');
-  dd($reason, 'Reason');
-  dpm("Oops, failed login: $reason");
+  if ($result) {
+    dpm("Yay, successful login");
+  }
+  else {
+    dpm("Oops, failed login: $reason");
+    dd($reason, 'Reason');
+  }
   //if(isset($_SESSION['nnels_stats'])) dd($_SESSION['nnels_stats']);
 
 }
