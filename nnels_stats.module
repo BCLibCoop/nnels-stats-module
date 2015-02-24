@@ -55,6 +55,35 @@ function nnels_stats_views_api() {
     );
 }
 
+/**
+ * Implements action_info().
+ */
+function nnels_stats_action_info() {
+  return array(
+
+    //batch update Genre, Subjects.
+    'nnels_stats_delete_visit_entry' => array(
+      'label' => t('NNELS Stats: delete entry'),
+      'type' => 'entity',
+      'configurable' => FALSE, //TRUE,
+      'triggers' => array('any'),
+    ),
+
+    //_cals_run_batch_update_field_collection_s3_path
+    //batch copy existing S3 paths to Field Collection "field_file_resource"
+    'x_cals_run_batch_update_field_collection_s3_path' => array(
+      'label' => t('CALS: Copy S3 paths to Field Collection'),
+      'type' => 'node',
+      'configurable' => FALSE,
+      'triggers' => array('any'),
+    ),
+  
+  );
+}
+
+
+
+
 
 
 /**
