@@ -28,9 +28,9 @@ function nnels_stats_init() {
  * @param string $reason
  *   The reason that the user's login attempt failed. Should be on of
  *   1 (username unknown), 2 (bad password), 3 (invalid patron type),
- *   4 (blocked account).
+ *   4 (blocked account). NULL for successful logins.
  */
-function nnels_stats_calsauthen_login_result($result, $reason) {
+function nnels_stats_calsauthen_login_result($result, $reason = NULL) {
   dd($_SESSION['calsauthen_target_organization'], 'Org');
   dd($_SESSION['calsauthen_target_driver'], 'Driver');
   if ($result) {
