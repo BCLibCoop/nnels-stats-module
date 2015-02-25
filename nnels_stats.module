@@ -374,8 +374,6 @@ function _nnels_stats_get_org_by_referring_url($referring_url) {
       }
     }
   }
-	//dpm("THERE SEEMS TO BE NO ASSOCIATED URL???");
-
 	return 0;
 
 }
