@@ -155,7 +155,7 @@ function _nnels_stats_tracker() {
 	}
 
 	
-	drupal_set_message("orgid = $orgid");
+	//drupal_set_message("orgid = $orgid");
   //empty referring URL, no session:
   //$pos === FALSE 
   if($referring_url_type == 1) {
@@ -178,7 +178,7 @@ function _nnels_stats_tracker() {
   }
   
   if ($referring_url_type === 4 && $session_exists === FALSE) {
-	  dpm("we don't track this");
+	  //dpm("we don't track this");
     return;
   }
   if($user->uid > 0 && $session_exists === TRUE) {
@@ -363,7 +363,6 @@ function _nnels_stats_get_org_by_referring_url($referring_url) {
     REGEXP b.setting_value",
     array(':referring_url_value' => $referring_url)
   );
-  dpm("referring_url_value = $referring_url");
   if ($target->rowCount()) {
     foreach ($target as $attr) {
 			dpm($attr);
@@ -375,7 +374,7 @@ function _nnels_stats_get_org_by_referring_url($referring_url) {
       }
     }
   }
-	dpm("THERE SEEMS TO BE NO ASSOCIATED URL???");
+	//dpm("THERE SEEMS TO BE NO ASSOCIATED URL???");
 
 	return 0;
 
