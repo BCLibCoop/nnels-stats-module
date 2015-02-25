@@ -78,35 +78,29 @@ function nnels_stats_init() {
  *   4 (blocked account). NULL for successful logins.
  */
 function nnels_stats_calsauthen_login_result($result, $reason = NULL, $uid = NULL) {
-  dd($_SESSION['calsauthen_target_organization'], 'Org');
-  dd($_SESSION['calsauthen_target_driver'], 'Driver');
+  //dd($_SESSION['calsauthen_target_organization'], 'Org');
+  //dd($_SESSION['calsauthen_target_driver'], 'Driver');
   
   if($_SESSION['nnels_stats']['orgid'] == 0) {
-
 		$_SESSION['nnels_stats']['orgid'] = $_SESSION['calsauthen_target_organization'];
   	$_SESSION['nnels_stats']['target_orgid'] = $_SESSION['calsauthen_target_organization'];
-
   }
   if($uid > 0) {
 		$orgid = nnels_stats_get_org_by_uid($uid);
 		$_SESSION['nnels_stats']['orgid'] = $orgid;
   	$_SESSION['nnels_stats']['target_orgid'] = $orgid;
-  
   }
   
 	$attributes = isset($_SESSION['nnels_stats']) ? $_SESSION['nnels_stats'] : array();
 
   if ($result) {
-  	//printAndDie($attributes, $uid, $orgid);
-		
-  
     _nnels_update_visit($attributes, 1, 0, $uid);
-
-    unset($_SESSION['nnels_stats']);
+    unset($_SESSION['nnels_stats']); // clear session
   }
   else {
     dpm("Oops, failed login: $reason");
-    dd($reason, 'Reason');
+    //dd($reason, 'Reason');
+    //$_SESSION['nnels_stats']
 		_nnels_update_visit($attributes, 0, $reason, $uid);
   }
 
@@ -153,11 +147,11 @@ function _nnels_stats_tracker() {
 	else {
 	  $orgid = _nnels_stats_get_org_by_referring_url($ref);
 	}
-
+	$ip = $_SERVER['REMOTE_ADDR'];
 	
 	//drupal_set_message("orgid = $orgid");
   //empty referring URL, no session:
-  //$pos === FALSE 
+  //blank or bookmarked URL
   if($referring_url_type == 1) {
   	if($user->uid > 0)  $orgid = nnels_stats_get_org_by_uid($user->uid);
  
@@ -166,12 +160,12 @@ function _nnels_stats_tracker() {
 		  'url_type' => $referring_url_type,
 			'authen_success' => 88,
 	  	'orgid' => $orgid,
+	  	'ip_address' => $ip,
   	);
 		$visitid = _nnels_add_visit($arr); 
 		if($user->uid < 1) {
 	  	$arr['visitid'] = $visitid;
 	  	$_SESSION['nnels_stats'] = $arr;
-		  
 		}
    	return;
 
@@ -256,6 +250,7 @@ function _nnels_add_visit($arr) {
 	    'orgid' => $arr['orgid'],
 	    'referring_url_type' => $arr['url_type'],
 	    'created' => REQUEST_TIME,
+	    'ip_address' => $arr['ip_address'],
 	  ))
 	  ->execute();
 	dpm($arr);  
@@ -284,6 +279,7 @@ function _nnels_update_visit($arr, $success, $reason, $uid) {
 			    'orgid' => $arr['orgid'],
 			    'referring_url_type' => $arr['url_type'],
 			    'created' => REQUEST_TIME,
+	    		'ip_address' => $arr['ip_address'],
 			  ))
 			  ->condition('visitid', $arr['visitid'], '=')
 			  ->execute();
@@ -374,6 +370,8 @@ function _nnels_stats_get_org_by_referring_url($referring_url) {
       }
     }
   }
+	//dpm("THERE SEEMS TO BE NO ASSOCIATED URL???");
+
 	return 0;
 
 }

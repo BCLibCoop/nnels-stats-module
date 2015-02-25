@@ -58,6 +58,14 @@ function nnels_stats_schema() {
         'not null' => TRUE,
         'default' => time(),
       ),
+      'ip_address' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+        'description' => t('The IP Address of the user.'), 
+      ),
+      
+      
     ),
     'primary key' => array('visitid'),
     'indexes' => array(
