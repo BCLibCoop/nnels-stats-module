@@ -9,7 +9,54 @@
  */
 function nnels_stats_menu() {
   $items = array();
+  
+	$items['admin/config/nnels_stats'] = array(
+    'title' => 'Test NNELS Stats Entity Status',
+    'access arguments' => array('administer site configuration'),
+    'page callback' => 'nnels_stats_test_entity',
+    'type' => MENU_NORMAL_ITEM,
+	);
+	
+	
+  
   return $items;
+}
+/**
+ * Implements hook_entity_info().
+ */
+function nnels_stats_entity_info() {
+
+  $info = array();
+
+  $info['nnelsvisitor'] = array(
+    'label' => t('Visit'),
+    'base table' => 'nnels_stats',
+    'entity keys' => array(
+      'id' => 'visitid',
+    ),
+    'module' => 'nnels_stats',
+    'views controller class' => 'EntityDefaultViewsController',
+    
+  );
+
+  return $info;
+}
+/**
+ * Simple test ....
+ */
+function nnels_stats_test_entity() {
+
+	try{
+		$visits = entity_load('nnelsvisitor', array(1139, 1138));
+		dpm($visits);
+	}
+	catch(Exception $e) {
+	
+	  dpm($e);
+	
+	}
+	return 'Some string';
+
 }
 
 /**
@@ -34,13 +81,15 @@ function nnels_stats_calsauthen_login_result($result, $reason = NULL) {
   dd($_SESSION['calsauthen_target_organization'], 'Org');
   dd($_SESSION['calsauthen_target_driver'], 'Driver');
   if ($result) {
-    dpm("Yay, successful login");
+    _nnels_update_visit($_SESSION['nnels_stats'], 1, 0);
+    unset($_SESSION['nnels_stats']);
   }
   else {
     dpm("Oops, failed login: $reason");
     dd($reason, 'Reason');
+		_nnels_update_visit($_SESSION['nnels_stats'], 0, $reason);
   }
-  //if(isset($_SESSION['nnels_stats'])) dd($_SESSION['nnels_stats']);
+
 
 }
 
@@ -54,61 +103,6 @@ function nnels_stats_views_api() {
         'path' => drupal_get_path('module', 'nnels_stats') . '/includes/views',
     );
 }
-
-/**
- * Implements action_info().
- */
-function nnels_stats_action_info() {
-  return array(
-
-    //batch update Genre, Subjects.
-    'nnels_stats_delete_visit_entry' => array(
-      'label' => t('NNELS Stats: delete entry'),
-      'type' => 'entity',
-      'configurable' => FALSE, //TRUE,
-      'triggers' => array('any'),
-    ),
-
-    //_cals_run_batch_update_field_collection_s3_path
-    //batch copy existing S3 paths to Field Collection "field_file_resource"
-    'x_cals_run_batch_update_field_collection_s3_path' => array(
-      'label' => t('CALS: Copy S3 paths to Field Collection'),
-      'type' => 'node',
-      'configurable' => FALSE,
-      'triggers' => array('any'),
-    ),
-  
-  );
-}
-
-
-
-
-
-
-/**
- * populates db
- *
- * @param array $arr
- *
- * @return integer $visitid
- *  the primary key from the db insert
- *   
- */
-function _nnels_add_visit($arr) {
-  	$visitid = db_insert('nnels_stats')
-		  ->fields(array(
-		    'authen_type' => $arr['url_type'],
-		    'authen_success' => $arr['authen_success'],
-		    'authen_failure_reason' => 0,
-		    'orgid' => $arr['orgid'],
-		    'referring_url_type' => $arr['url_type'],
-		    'created' => REQUEST_TIME,
-		  ))
-		  ->execute();
-	  return $visitid;
-}
-
 
 
 /**
@@ -134,14 +128,19 @@ function _nnels_stats_tracker() {
 	//drupal_set_message("REF URL TYPE: $referring_url_type | ref: $ref");
   $orgid = 0;
   $target_orgid = 0;
-	if(isset($_SESSION['calsauthen_target_organization'])) $target_orgid = $_SESSION['calsauthen_target_organization'];
-	
+	if(isset($_SESSION['calsauthen_target_organization'])) {
+	  $target_orgid = $_SESSION['calsauthen_target_organization'];
+	  $orgid = $target_orgid;
+			
+	}
+	drupal_set_message("orgid = $orgid");
   //empty referring URL, no session:
   //$pos === FALSE 
   if($referring_url_type == 1) {
   	if($user->uid > 0) {
   	  //dpm($user);
   		$orgid = nnels_stats_get_org_by_uid($user->uid);
+  		$target_orgid = $orgid;
   	}
   	$arr = array(
 		  'referrer' => $ref,
@@ -215,10 +214,69 @@ function _nnels_stats_tracker() {
     //dpm($_SESSION['nnels_stats']);
     //if($user->uid < 1) _nnels_add_visit($_SESSION['nnels_stats']);
   }  
-  //drupal_set_message(__METHOD__ . ": referring_url_type = $referring_url_type | REFERRING URL = " . $ref . " | UID = " . $user->uid . " | session_exists = " . $session_exists);
+	drupal_set_message(__METHOD__ . ": referring_url_type = $referring_url_type | REFERRING URL = " . $ref . " | UID = " . $user->uid . " | orgid = $orgid | session_exists = " . $session_exists);
 	//dpm($_SESSION);  
 
 
+}
+
+
+/**
+ * populates db
+ *
+ * @param array $arr
+ *
+ * @return integer $visitid
+ *  the primary key from the db insert
+ *   
+ */
+function _nnels_add_visit($arr) {
+	$visitid = db_insert('nnels_stats')
+	  ->fields(array(
+	    'authen_type' => $arr['url_type'],
+	    'authen_success' => $arr['authen_success'],
+	    'authen_failure_reason' => 0,
+	    'orgid' => $arr['orgid'],
+	    'referring_url_type' => $arr['url_type'],
+	    'created' => REQUEST_TIME,
+	  ))
+	  ->execute();
+	dpm($arr);  
+  return $visitid;
+ 
+}
+
+/**
+ * updates visit row with success and reason
+ *
+ * @param array $arr
+ * @param integer $success
+ *  1 = successful login, 0 = failure
+ * @param array $reason
+ *  0 = no reason (or successful login), 1 = 
+ *
+ *   
+ */
+function _nnels_update_visit($arr, $success, $reason) {
+		
+		if(!empty($arr['visitid']) ) {
+		
+			$num_updated = db_update('nnels_stats') // Table name no longer needs {}
+			  ->fields(array(
+			    'authen_type' => $arr['url_type'],
+			    'authen_success' => $success,
+			    'authen_failure_reason' => $reason,
+			    'orgid' => $arr['orgid'],
+			    'referring_url_type' => $arr['url_type'],
+			    'created' => REQUEST_TIME,
+			  ))
+			  ->condition('visitid', $arr['visitid'], '=')
+			  ->execute();
+		
+ 
+		
+		}
+ 
 }
 
 /**
