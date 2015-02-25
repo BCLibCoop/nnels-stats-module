@@ -77,17 +77,37 @@ function nnels_stats_init() {
  *   1 (username unknown), 2 (bad password), 3 (invalid patron type),
  *   4 (blocked account). NULL for successful logins.
  */
-function nnels_stats_calsauthen_login_result($result, $reason = NULL) {
+function nnels_stats_calsauthen_login_result($result, $reason = NULL, $uid = NULL) {
   dd($_SESSION['calsauthen_target_organization'], 'Org');
   dd($_SESSION['calsauthen_target_driver'], 'Driver');
+  
+  if($_SESSION['nnels_stats']['orgid'] == 0) {
+
+		$_SESSION['nnels_stats']['orgid'] = $_SESSION['calsauthen_target_organization'];
+  	$_SESSION['nnels_stats']['target_orgid'] = $_SESSION['calsauthen_target_organization'];
+
+  }
+  if($uid > 0) {
+		$orgid = nnels_stats_get_org_by_uid($uid);
+		$_SESSION['nnels_stats']['orgid'] = $orgid;
+  	$_SESSION['nnels_stats']['target_orgid'] = $orgid;
+  
+  }
+  
+	$attributes = isset($_SESSION['nnels_stats']) ? $_SESSION['nnels_stats'] : array();
+
   if ($result) {
-    _nnels_update_visit($_SESSION['nnels_stats'], 1, 0);
+  	//printAndDie($attributes, $uid, $orgid);
+		
+  
+    _nnels_update_visit($attributes, 1, 0, $uid);
+
     unset($_SESSION['nnels_stats']);
   }
   else {
     dpm("Oops, failed login: $reason");
     dd($reason, 'Reason');
-		_nnels_update_visit($_SESSION['nnels_stats'], 0, $reason);
+		_nnels_update_visit($attributes, 0, $reason, $uid);
   }
 
 
@@ -127,27 +147,25 @@ function _nnels_stats_tracker() {
 	$referring_url_type = nnels_stats_get_url_type($ref); 
 	//drupal_set_message("REF URL TYPE: $referring_url_type | ref: $ref");
   $orgid = 0;
-  $target_orgid = 0;
 	if(isset($_SESSION['calsauthen_target_organization'])) {
-	  $target_orgid = $_SESSION['calsauthen_target_organization'];
-	  $orgid = $target_orgid;
-			
+	  $orgid = $_SESSION['calsauthen_target_organization'];
 	}
+	else {
+	  $orgid = _nnels_stats_get_org_by_referring_url($ref);
+	}
+
+	
 	drupal_set_message("orgid = $orgid");
   //empty referring URL, no session:
   //$pos === FALSE 
   if($referring_url_type == 1) {
-  	if($user->uid > 0) {
-  	  //dpm($user);
-  		$orgid = nnels_stats_get_org_by_uid($user->uid);
-  		$target_orgid = $orgid;
-  	}
+  	if($user->uid > 0)  $orgid = nnels_stats_get_org_by_uid($user->uid);
+ 
   	$arr = array(
 		  'referrer' => $ref,
 		  'url_type' => $referring_url_type,
 			'authen_success' => 88,
 	  	'orgid' => $orgid,
-		  'target_orgid' => $target_orgid,
   	);
 		$visitid = _nnels_add_visit($arr); 
 		if($user->uid < 1) {
@@ -171,12 +189,10 @@ function _nnels_stats_tracker() {
   if(!empty($ref) && $user->uid > 0) {
   
 		$orgid = nnels_stats_get_org_by_uid($user->uid);
-		$target_orgid = $orgid;
   	$arr = array(
   	  'referrer' => $ref,
   	  'url_type' => $referring_url_type, 
   	  'orgid' => $orgid,
-  	  'target_orgid' => $target_orgid,
   	  'authen_success' => 88,
   	);
 		_nnels_add_visit($arr);  
@@ -187,14 +203,14 @@ function _nnels_stats_tracker() {
 	//unset($_SESSION['nnels_stats']);
   if(!empty($ref) && $session_exists === FALSE && $user->uid < 1) {
 		//check org id if no session variable
-		if($target_orgid === 0) $target_orgid = _nnels_stats_get_org_by_referring_url($ref);
-		$orgid = $target_orgid;  
-	
+		if($orgid === 0) {
+		
+			$orgid = _nnels_stats_get_org_by_referring_url($ref);
+		}
   	$arr = array(
   	  'referrer' => $ref,
   	  'url_type' => $referring_url_type, //why??
   	  'orgid' => $orgid,
-  	  'target_orgid' => $target_orgid,
   	  'pages' => array(),
   	  'authen_success' => 88,
   	);
@@ -214,7 +230,8 @@ function _nnels_stats_tracker() {
     //dpm($_SESSION['nnels_stats']);
     //if($user->uid < 1) _nnels_add_visit($_SESSION['nnels_stats']);
   }  
-	drupal_set_message(__METHOD__ . ": referring_url_type = $referring_url_type | REFERRING URL = " . $ref . " | UID = " . $user->uid . " | orgid = $orgid | session_exists = " . $session_exists);
+  $visitid = (isset($_SESSION['nnels_stats']['visitid']) ) ? $_SESSION['nnels_stats']['visitid'] : 0;
+	drupal_set_message(__METHOD__ . ": referring_url_type = $referring_url_type | REFERRING URL = " . $ref . " | UID = " . $user->uid . " | orgid = $orgid | session_exists = " . $session_exists . " | visitid = $visitid");
 	//dpm($_SESSION);  
 
 
@@ -257,10 +274,8 @@ function _nnels_add_visit($arr) {
  *
  *   
  */
-function _nnels_update_visit($arr, $success, $reason) {
-		
+function _nnels_update_visit($arr, $success, $reason, $uid) {
 		if(!empty($arr['visitid']) ) {
-		
 			$num_updated = db_update('nnels_stats') // Table name no longer needs {}
 			  ->fields(array(
 			    'authen_type' => $arr['url_type'],
@@ -272,9 +287,6 @@ function _nnels_update_visit($arr, $success, $reason) {
 			  ))
 			  ->condition('visitid', $arr['visitid'], '=')
 			  ->execute();
-		
- 
-		
 		}
  
 }
@@ -351,8 +363,10 @@ function _nnels_stats_get_org_by_referring_url($referring_url) {
     REGEXP b.setting_value",
     array(':referring_url_value' => $referring_url)
   );
+  dpm("referring_url_value = $referring_url");
   if ($target->rowCount()) {
     foreach ($target as $attr) {
+			dpm($attr);
 
       // The node ID of the organization that corresponds to the registered
       // referring URL.
@@ -361,6 +375,8 @@ function _nnels_stats_get_org_by_referring_url($referring_url) {
       }
     }
   }
+	dpm("THERE SEEMS TO BE NO ASSOCIATED URL???");
+
 	return 0;
 
 }
