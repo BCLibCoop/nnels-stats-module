@@ -52,12 +52,12 @@ function nnels_stats_views_data() {
 	    ),
 		); 
 		
-		$data['nnels_stats']['authen_type'] = array(
+		$data['nnels_stats']['new_user'] = array(
 		
-	    'title' => t('Authentication Type'),
-	    'help' => t('Authentication type'),
+	    'title' => t('New Registration'),
+	    'help' => t('Is this a new user?'),
 	    'field' => array(
-	        'handler' => 'views_handler_field_numeric',
+	        'handler' => 'views_handler_field_boolean',
 	    ),
 	    'sort' => array(
 	        'handler' => 'views_handler_sort',
@@ -71,7 +71,7 @@ function nnels_stats_views_data() {
 		
 	    'title' => t('Referring URL Type'),
 	    'field' => array(
-	        'handler' => 'views_handler_field_numeric',
+	        'handler' => 'nnels_stats_views_handler_field_url_type',
 	    ),
 	    'sort' => array(
 	        'handler' => 'views_handler_sort',
@@ -81,11 +81,13 @@ function nnels_stats_views_data() {
 	    ),
 		
 		);
-		$data['nnels_stats']['authen_success'] = array(
 		
-	    'title' => t('Successful Authentication?'),
+
+		$data['nnels_stats']['authen_result'] = array(
+		
+	    'title' => t('Authentication Result'),
 	    'field' => array(
-	        'handler' => 'views_handler_field_numeric', //views_handler_field_prerender_list??
+	        'handler' => 'nnels_stats_views_handler_authentication_results', //views_handler_field_prerender_list??
 	    ),
 	    'sort' => array(
 	        'handler' => 'views_handler_sort',
@@ -95,17 +97,48 @@ function nnels_stats_views_data() {
 	    ),
 		
 		);
-		$data['nnels_stats']['authen_failure_reason'] = array(
+		$data['nnels_stats']['role'] = array(
 		
-	    'title' => t('Reason authentication failed'),
+	    'title' => t('User Role'),
 	    'field' => array(
-	        'handler' => 'views_handler_field_numeric',
+	        'handler' => 'views_handler_field_boolean',
+	        'click sortable' => TRUE, // This is use by the table display plugin.
 	    ),
 	    'sort' => array(
 	        'handler' => 'views_handler_sort',
 	    ),
 	    'filter' => array(
 	        'handler' => 'views_handler_filter_numeric',
+	    ),
+		
+		);
+		
+		$data['nnels_stats']['login_page'] = array(
+		
+	    'title' => t('Login URL'),
+	    'field' => array(
+	        'handler' => 'views_handler_field',
+	        'click sortable' => TRUE, // This is use by the table display plugin.
+	    ),
+	    'sort' => array(
+	        'handler' => 'views_handler_sort',
+	    ),
+	    'filter' => array(
+	        'handler' => 'views_handler_filter_string',
+	    ),
+		
+		);		$data['nnels_stats']['ip_address'] = array(
+		
+	    'title' => t('Ip Address'),
+	    'field' => array(
+	        'handler' => 'views_handler_field',
+	        'click sortable' => TRUE, // This is use by the table display plugin.
+	    ),
+	    'sort' => array(
+	        'handler' => 'views_handler_sort',
+	    ),
+	    'filter' => array(
+	        'handler' => 'views_handler_filter_string',
 	    ),
 		
 		);

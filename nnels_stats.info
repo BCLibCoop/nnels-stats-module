@@ -1,5 +1,7 @@
-name = NNELS Statistics
+name = NNELS Visits
 description = Captures logins and login attempts, including failed ones.
 core = 7.x
 package = --CALS
+files[] = views/handlers/nnels_stats_views_handler_field_url_type.inc
+files[] = views/handlers/nnels_stats_views_handler_authentication_results.inc
 dependencies[] = calsauthen

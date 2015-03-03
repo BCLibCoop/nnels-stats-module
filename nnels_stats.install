@@ -4,6 +4,33 @@
  * Install, update and uninstall functions for the cals external search module.
  */
 
+
+/**
+ * Implements hook_enable()
+ */
+function nnels_stats_enable() {
+    db_update('system')
+    ->fields(array('weight' => -10))
+    ->condition('type', 'module')
+    ->condition('name', 'nnels_stats')
+    ->execute();
+}
+      /* 
+      'authen_success' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => t("Whether or not the login / registration attempt was successful: 0 = false; 1 = true."),
+ 
+      'authen_failure_reason' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => t("Enumeration of xxxx."),
+      ),
+      */
 /**
  * Implements hook_schema().
  */
@@ -16,27 +43,22 @@ function nnels_stats_schema() {
         'not null' => TRUE,
         'description' => t('Primary Key: stats row id.'),
       ),
-      'authen_type' => array(
-        'type' => 'int',
-        'unsigned' => TRUE,
-        'not null' => TRUE,
-        'default' => 1,
-        'description' => t("type of login attempt: 1 = login (returning user); 2 = registration (new user)"),
-      ),
-      'authen_success' => array(
+      'new_user' => array(
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE,
         'default' => 0,
-        'description' => t("Whether or not the login / registration attempt was successful: 0 = false; 1 = true."),
+        'description' => t("0 = no, 1 = yes"),
       ),
-      'authen_failure_reason' => array(
+
+      'authen_result' => array(
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE,
         'default' => 0,
-        'description' => t("Enumeration of xxxx."),
-      ),
+        'description' => t("0 = successfull; 1 = unknown username; 2 = bad password; 3 = invalid patron type; 4 = blocked account; 5 = return user, already logged in"),
+      ),  
+
       'orgid' => array(
         'type' => 'int',
         'unsigned' => TRUE,
@@ -53,7 +75,7 @@ function nnels_stats_schema() {
         'description' => t("The type of referring URL: 1 = referring URL, 2 = external URL, 3 = direct link"),
       ),  
       'created' => array(
-        'description' => 'The Unix timestamp when the node was created.',
+        'description' => 'The Unix timestamp when the entry was created.',
         'type' => 'int',
         'not null' => TRUE,
         'default' => time(),
@@ -64,8 +86,20 @@ function nnels_stats_schema() {
         'not null' => FALSE,
         'description' => t('The IP Address of the user.'), 
       ),
-      
-      
+      'login_page' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+        'description' => t('The Drupal page the user is on when she logins.'), 
+      ),
+      'role' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 1,
+        'description' => t("0 = unknown; 1 = patron; 2 = site admin, etc."),
+      ),  
+
     ),
     'primary key' => array('visitid'),
     'indexes' => array(
