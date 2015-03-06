@@ -28,12 +28,12 @@ function nnels_stats_menu() {
 function nnels_stats_init() {
 	//for testing / dev purposes, only track on specific IPs
 	$ips = array('99.246.47.248', '70.26.15.139', '50.69.30.84');
-	$ips = array('10.77.110.14');
 	$ips = array('99.246.47.248');
 
+	$ips = array('10.77.110.14'); // google or some other spider??
 	$ip = $_SERVER['REMOTE_ADDR'];
-	if(in_array($ip, $ips)) _nnels_stats_tracker();
-	// _nnels_stats_tracker();
+	if(!in_array($ip, $ips)) _nnels_stats_tracker();
+  //_nnels_stats_tracker();
 }
 
 /**
@@ -59,20 +59,28 @@ function nnels_stats_user_logout($account) {
  */
 function nnels_stats_user_login(&$edit, $account) {
   global $user;
-	dpm(__FUNCTION__);
+	//dpm(__FUNCTION__);
+
 	//if no login session, its likely because we're dealing w/ referring_url_type = 4
 	if(empty($_SESSION['nnels_stats'])) {
-		$orgid = nnels_stats_get_org_by_uid($account->uid);
-		$ip = $_SERVER['REMOTE_ADDR'];
+		$arr = array();
+		$arr['orgid'] = nnels_stats_get_org_by_uid($account->uid);
+		$arr['ip_address'] = $_SERVER['REMOTE_ADDR'];
 		//get the referring URL
   	$ref = nnels_stats_get_referrer();
 		//referring url types: 1 = blank / direct; 2 = external (not partner); 3 = referring (partner); 4 = site?
-		$referring_url_type = 4; //?? nnels_stats_get_url_type($ref); 
-	  _nnels_stats_set_session($account, $orgid, $ref, $referring_url_type, $ip);
+		$arr['referring_url_type'] = 4; //?? nnels_stats_get_url_type($ref); 
+	  $arr['new_user'] = 0;
+	  $arr['authen_result'] = 1;
+		$arr['visitid'] = _nnels_add_visit($arr);
+		//DAVE
+		//_nnels_update_visit($arr, 1, $account->uid);		
+		$_SESSION['nnels_stats'] = $arr;	 
 	}
 	else {
 		_nnels_stats_update_session($account);
 	}	
+
 }
 
 
@@ -91,7 +99,7 @@ function nnels_stats_user_insert(&$edit, $account, $category) {
 			//successful registration, update db and unset session
 			_nnels_update_visit($arr, 1, $account->uid);  
 			unset($_SESSION['nnels_stats']);
-			dpm(__FUNCTION__);
+			//dpm(__FUNCTION__);
 		}	
 	}
 }
@@ -116,15 +124,21 @@ function nnels_stats_calsauthen_login_result($result, $uid = NULL) {
 		$orgid = nnels_stats_get_org_by_uid($uid);
 		$_SESSION['nnels_stats']['orgid'] = $orgid;
   }
-
+	$_SESSION['nnels_stats']['login_page'] = nnels_stats_get_referrer();
 	$arr = isset($_SESSION['nnels_stats']) ? $_SESSION['nnels_stats'] : array();
+	
+	if(!isset($arr['visitid'])) {
+	  drupal_set_message("WOOPS, no visitid, Dave will address!");
+	}
+	
+	
 	_nnels_update_visit($arr, $result, $uid);
 
 	//if successful login, unset the session variable; otherwise, reset the session with a new db insert
  	if ($result == 1) unset($_SESSION['nnels_stats']); 
-	else  reset_session_failed_login($arr, $uid);
+	else  _nnels_stats_reset_session_failed_login($arr, $uid);
 
- 	dpm(__FUNCTION__ . " - the result is: $result");
+ 	//dpm(__FUNCTION__ . " - the result is: $result");
 }
 
 
@@ -146,50 +160,52 @@ function _nnels_stats_tracker() {
   //get the referring URL
   $ref = nnels_stats_get_referrer();
 	//referring url types: 1 = blank / direct; 2 = external (not partner); 3 = referring (partner); 4 = site?
+	//5 = org search
+	
 	$referring_url_type = nnels_stats_get_url_type($ref); 
 
-  if($user->uid > 0 && $session_exists === TRUE) {
-    unset($_SESSION['nnels_stats']);
-    $session_exists = FALSE;
-  }
+	_nnels_kill_session($referring_url_type, $user, $session_exists);
 	//&& $session_exists === FALSE && $user->uid > 0
-  if ($referring_url_type === 4 && $session_exists === FALSE) {
-	  dpm("we don't track this");
-		//unset($_SESSION['nnels_stats']);
+  if ($session_exists && $_SESSION['nnels_stats']['$referring_url_type'] == 4) {
     return;
   }
-  
- 
-  if (isset($_SESSION['nnels_stats']['referring_url_type']) && 
-    $_SESSION['nnels_stats']['referring_url_type'] == 4) {
-  	return;
-  }
- 
- 
-	$orgid = 0;
-	if(isset($_SESSION['calsauthen_target_organization'])) {
-	  $orgid = $_SESSION['calsauthen_target_organization'];
-	}
+
+
+	$org_id = _nnels_set_orgid();
 	//logged in user coming from other site
-	if($user->uid > 0 && $referring_url_type != 4) {
+	if($user->uid > 0 && $referring_url_type != 4 && $referring_url_type != 5) {
 	  $visitid = _nnels_stats_add_visit_loggedin($user, $ref, $referring_url_type, $ip);
 		//return;
 	}	
 	//$session_exists === FALSE || referring URL is not site based 
-  if($user->uid == 0 && (empty($_SESSION['nnels_stats']['visitid']) || $referring_url_type != 4) ) {
+	//|| $referring_url_type != 4
+	
+  if($user->uid == 0 && (empty($_SESSION['nnels_stats']['visitid']) ) ) {
 	  _nnels_stats_set_session($user, $orgid, $ref, $referring_url_type, $ip);
 		$session_exists = TRUE;  
 	 	$visitid = $_SESSION['nnels_stats']['visitid'];
+	 	//dpm($_SESSION['nnels_stats']);
   }
-	//track pages visited on site before logging in. This is not yet implemented into the DB...
-  if( isset($_SESSION['nnels_stats']) ) {
-    $_SESSION['nnels_stats']['pages'][] = check_plain(request_uri()); //should use check_plain()?
-   	dpm($_SESSION['nnels_stats']);
-    //if($user->uid < 1) _nnels_add_visit($_SESSION['nnels_stats']);
-  }  
-	drupal_set_message(__METHOD__ . ": referring_url_type = $referring_url_type | REFERRING URL = " . $ref . " | UID = " . $user->uid . " | orgid = $orgid | session_exists = " . $session_exists . " | visitid = $visitid");
-	dpm($_SESSION);  
 
+	//drupal_set_message(__METHOD__ . ": referring_url_type = $referring_url_type | REFERRING URL = " . $ref . " | UID = " . $user->uid . " | orgid = $orgid | session_exists = " . $session_exists . " | visitid = $visitid");
+	//dpm($_SESSION);  
+
+
+}
+
+function _nnels_set_orgid() {
+	return (isset($_SESSION['calsauthen_target_organization'])) ? $_SESSION['calsauthen_target_organization'] : 0;
+}
+
+function _nnels_kill_session($ref_type, $account, &$session_exists) {
+  if($session_exists === TRUE ){
+  	if( ($account->uid > 0) || ($account->uid == 0 && $ref_type < 4) )  {
+	  	//drupal_set_message("HEY, we're killing this session");
+	    unset($_SESSION['nnels_stats']);
+	    $session_exists = FALSE;
+  	
+  	}
+  }
 
 }
 
@@ -202,8 +218,8 @@ function _nnels_stats_tracker() {
  * @param integer $uid
  *   
  */
-function reset_session_failed_login($arr, $uid) {
-
+function _nnels_stats_reset_session_failed_login($arr, $uid) {
+	//drupal_set_message(__FUNCTION__);
 	$arr['visitid'] = _nnels_add_visit($arr);
 	$_SESSION['nnels_stats'] = $arr;
 }
@@ -217,6 +233,7 @@ function reset_session_failed_login($arr, $uid) {
 function _nnels_stats_update_session($account) {
 	
   if(!empty($account->field_organization)) $_SESSION['nnels_stats']['orgid'] = $account->field_organization['und'][0]['nid'];
+  $_SESSION['nnels_stats']['login_page'] = nnels_stats_get_referrer();
 }
 
 /**
@@ -266,7 +283,8 @@ function _nnels_stats_set_session($account, $orgid, $ref, $referring_url_type, $
 	$arr['visitid'] = _nnels_add_visit($arr);
 	//start the session w/ a new visitid
 	$_SESSION['nnels_stats'] = $arr;
-
+	//dpm(__FUNCTION__);
+	//dpm($_SESSION);
 }
 
 /**
@@ -279,7 +297,6 @@ function _nnels_stats_set_session($account, $orgid, $ref, $referring_url_type, $
  *   
  */
 function _nnels_add_visit($arr) {
-	//printAndDie(__FUNCTION__, $arr);
 	$visitid = db_insert('nnels_stats')
 	  ->fields(array(
 	    'new_user' => $arr['new_user'],
@@ -302,7 +319,22 @@ function _nnels_add_visit($arr) {
  * @param integer $result
  *  1 = successful login, ...
  */
+/*
+		$arr = array();
+		$arr['orgid'] = nnels_stats_get_org_by_uid($account->uid);
+		$arr['ip_address'] = $_SERVER['REMOTE_ADDR'];
+		$arr['referring_url_type'] = 4; //?? nnels_stats_get_url_type($ref); 
+	  $arr['new_user'] = 0;
+	  $arr['authen_result'] = 1;
+*/
+
+
 function _nnels_update_visit($arr, $result, $uid) {
+  if(empty($arr['visitid'])) {
+  
+  
+  }
+
 	if(!empty($arr['visitid']) ) {
 		if($arr['orgid'] == 0) $arr['orgid'] = nnels_stats_get_org_by_uid($uid);
 		$num_updated = db_update('nnels_stats') 
@@ -310,9 +342,8 @@ function _nnels_update_visit($arr, $result, $uid) {
 		  	'new_user' => $arr['new_user'],
 		    'authen_result' => $result,
 		    'orgid' => $arr['orgid'],
-		    //'referring_url_type' => $arr['referring_url_type'],
+		    'login_page' => $arr['login_page'],
 		    'created' => REQUEST_TIME,
-    		//'ip_address' => $arr['ip_address'],
 		  ))
 		  ->condition('visitid', $arr['visitid'], '=')
 		  ->execute();
@@ -330,6 +361,12 @@ function _nnels_update_visit($arr, $result, $uid) {
  */
 function nnels_stats_get_url_type($url) {
 	global $user;
+
+	$uri = $_SERVER['REQUEST_URI'];	
+  if(strpos($uri, '/organizations') !== FALSE) {
+  	//dpm($uri);
+    //return 5;
+  }
 
   $pos = strpos($url, "cals_dev");
   $pos = strpos($url, "nnels.ca"); //look to see if user is on site already

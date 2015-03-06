@@ -14,7 +14,7 @@ class nnels_stats_views_handler_field_url_type extends views_handler_field {
  	  4 => t("On site link"),
  	 );
  	 //dpm($arr);
- 	 if (array_key_exists($me, $arr)) return $arr[$me];  
+ 	 if (array_key_exists($me, $arr)) return $arr[$me] . " ($me)";  
 	 
    return "ENUMERATION COMING SOON for " . $me;
   }
