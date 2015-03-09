@@ -32,7 +32,7 @@ function nnels_stats_init() {
 
 	$ips = array('10.77.110.14'); // google or some other spider??
 	$ip = $_SERVER['REMOTE_ADDR'];
-	if(!in_array($ip, $ips)) _nnels_stats_tracker();
+	if(!in_array($ip, $ips) && strpos($ip, '180.76') === FALSE) _nnels_stats_tracker();
   //_nnels_stats_tracker();
 }
 
@@ -285,6 +285,16 @@ function _nnels_stats_set_session($account, $orgid, $ref, $referring_url_type, $
 	$_SESSION['nnels_stats'] = $arr;
 	//dpm(__FUNCTION__);
 	//dpm($_SESSION);
+}
+
+/**
+ * deletes non-partner urls after x days
+ * *   
+ */
+function _nnels_stats_delete_nonpartners() {
+	db_query("delete from {nnels_stats} where ip_address like '%'");
+	
+ 
 }
 
 /**
