@@ -86,6 +86,14 @@ function nnels_stats_schema() {
         'not null' => FALSE,
         'description' => t('The IP Address of the user.'), 
       ),
+      
+      'session_id' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+        'description' => t('The session id.'), 
+      ),
+      
       'login_page' => array(
         'type' => 'varchar',
         'length' => 255,

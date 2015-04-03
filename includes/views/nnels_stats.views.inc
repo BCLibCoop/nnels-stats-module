@@ -127,9 +127,28 @@ function nnels_stats_views_data() {
 	        'handler' => 'views_handler_filter_string',
 	    ),
 		
-		);		$data['nnels_stats']['ip_address'] = array(
+		);		
+
+		$data['nnels_stats']['login_page'] = array(
 		
-	    'title' => t('Ip Address'),
+	    'title' => t('Login URL'),
+	    'field' => array(
+	        'handler' => 'views_handler_field',
+	        'click sortable' => TRUE, // This is use by the table display plugin.
+	    ),
+	    'sort' => array(
+	        'handler' => 'views_handler_sort',
+	    ),
+	    'filter' => array(
+	        'handler' => 'views_handler_filter_string',
+	    ),
+		
+		);		
+				
+		
+		$data['nnels_stats']['session_id'] = array(
+		
+	    'title' => t('Session ID'),
 	    'field' => array(
 	        'handler' => 'views_handler_field',
 	        'click sortable' => TRUE, // This is use by the table display plugin.
