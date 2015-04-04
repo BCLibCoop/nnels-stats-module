@@ -114,19 +114,19 @@ function nnels_stats_user_insert(&$edit, $account, $category) {
  *   1 (successfull login), 2 (username unknown), 3 (bad password), 
  *   4 (invalid patron type), 5 (blocked account).
  */
-function nnels_stats_calsauthen_login_result($result, $uid = NULL) {
-  if($_SESSION['nnels_stats']['orgid'] == 0) {
-		$_SESSION['nnels_stats']['orgid'] = $_SESSION['calsauthen_target_organization'];
+function nnels_stats_calsauthen_login_result($result, $uid = NULL, $orgid = NULL) {
+  if( empty($orgid) && !empty($_SESSION['calsauthen_target_organization']) ) {
+  	$_SESSION['nnels_stats']['orgid'] = $_SESSION['calsauthen_target_organization'];
+    $orgid = $_SESSION['calsauthen_target_organization'];
   }
 	//if the uid is a user, reset orgid	
+	/*
   if($uid > 0) {
 		$orgid = nnels_stats_get_org_by_uid($uid);
 		$_SESSION['nnels_stats']['orgid'] = $orgid;
   }
-  else { //probably a failed log in attempt
-  
-  
-  }
+  */
+
 	$_SESSION['nnels_stats']['login_page'] = nnels_stats_get_referrer();
 	$arr = isset($_SESSION['nnels_stats']) ? $_SESSION['nnels_stats'] : array();
 	
@@ -136,7 +136,7 @@ function nnels_stats_calsauthen_login_result($result, $uid = NULL) {
 		  'referrer' => nnels_stats_get_referrer(),
 		  'new_user' => 0, //0=returning user, 1=new ... override this in hook_user_insert
 		  'referring_url_type' => 4,
-		  'orgid' => $_SESSION['nnels_stats']['orgid'],
+		  'orgid' => $orgid,
 		  'authen_result' => $result,
 		  'ip_address' => $_SERVER['REMOTE_ADDR'],
 		  'session_id' => session_id(),
