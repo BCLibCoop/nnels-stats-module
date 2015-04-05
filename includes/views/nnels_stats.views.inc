@@ -113,9 +113,10 @@ function nnels_stats_views_data() {
 		
 		);
 		
-		$data['nnels_stats']['login_page'] = array(
+		$data['nnels_stats']['ip_address'] = array(
 		
-	    'title' => t('Login URL'),
+	    'title' => t('IP Address'),
+	    'help' => t('The IP Address'),
 	    'field' => array(
 	        'handler' => 'views_handler_field',
 	        'click sortable' => TRUE, // This is use by the table display plugin.
