@@ -31,9 +31,12 @@ function nnels_stats_exit() {
 	$ips = array('99.246.47.248', '70.26.15.139', '50.69.30.84');
 	$ips = array('99.246.47.248');
 
-	$ips = array('10.77.110.14'); // google or some other spider??
+	$ips = array('10.77.110.14', '66.249.79.117'); // google or some other spider??
 	$ip = $_SERVER['REMOTE_ADDR'];
-	if(!in_array($ip, $ips) && strpos($ip, '180.76') === FALSE) _nnels_stats_tracker();
+	//dpm(__FUNCTION__);
+	if(!in_array($ip, $ips) && 
+	  strpos($ip, '180.76') === FALSE && 
+	  strpos($ip, '66.249.79') === FALSE) _nnels_stats_tracker();
   //_nnels_stats_tracker();
 }
 
@@ -61,7 +64,7 @@ function nnels_stats_user_login(&$edit, $account) {
   global $user;
 	//dpm(__FUNCTION__);
 
-	//if no login session, its likely because we're dealing w/ referring_url_type = 4
+	//if no login session, its likely because we're dealing w/ referring_url_type = 4 or regular login
 	if(empty($_SESSION['nnels_stats'])) {
 		$arr = array();
 		$arr['orgid'] = nnels_stats_get_org_by_uid($account->uid);
@@ -73,8 +76,8 @@ function nnels_stats_user_login(&$edit, $account) {
 		$arr['referring_url_type'] = 4; //?? nnels_stats_get_url_type($ref); 
 	  $arr['new_user'] = 0;
 	  $arr['authen_result'] = 1;
-		$arr['visitid'] = _nnels_add_visit($arr);
 		$arr['session_id'] = session_id();
+		$arr['visitid'] = _nnels_add_visit($arr);
 		//_nnels_update_visit($arr, 1, $account->uid);		
 		$_SESSION['nnels_stats'] = $arr;	 
 	}
@@ -92,14 +95,26 @@ function nnels_stats_user_insert(&$edit, $account, $category) {
 	
 	if(!empty($_SESSION['nnels_stats'])) {
 		$arr = $_SESSION['nnels_stats'];
-		if(!empty($arr['visitid']) ) {
+		if(!empty($arr['visitid']) && $arr['visitid'] > 0 ) {
 			$arr['orgid'] = $_SESSION['calsauthen_target_organization']; //just to be certain we're getting the orgid
 			$arr['new_user'] = 1; // this is a new user!
 			$arr['authen_result'] = 1;
 			$arr['role'] = 1;
 			$arr['session_id'] = session_id();
+			$arr['login_page']	= nnels_stats_get_referrer();	
+			//get_orgid
+			$orgid = nnels_stats_get_org_by_uid($account->uid);
+			
+			//dpm("ORGID = $orgid | session_orgid = " . $arr['orgid']);
+ 			//dpm($account);
+
 			//successful registration, update db and unset session
+			
+			
 			_nnels_update_visit($arr, 1, $account->uid);  
+			
+			
+			
 			unset($_SESSION['nnels_stats']);
 			//dpm(__FUNCTION__);
 		}	
@@ -115,7 +130,8 @@ function nnels_stats_user_insert(&$edit, $account, $category) {
  *   4 (invalid patron type), 5 (blocked account).
  */
 function nnels_stats_calsauthen_login_result($result, $uid = NULL, $orgid = NULL) {
-  if( empty($orgid) && !empty($_SESSION['calsauthen_target_organization']) ) {
+
+  if( (empty($orgid) || $orgid == 0) && !empty($_SESSION['calsauthen_target_organization']) ) {
   	$_SESSION['nnels_stats']['orgid'] = $_SESSION['calsauthen_target_organization'];
     $orgid = $_SESSION['calsauthen_target_organization'];
   }
@@ -127,7 +143,7 @@ function nnels_stats_calsauthen_login_result($result, $uid = NULL, $orgid = NULL
   }
   */
 
-	$_SESSION['nnels_stats']['login_page'] = nnels_stats_get_referrer();
+	$_SESSION['nnels_stats']['login_page'] =  nnels_stats_get_referrer(); //page the user logged in via
 	$arr = isset($_SESSION['nnels_stats']) ? $_SESSION['nnels_stats'] : array();
 	
 	if(!isset($arr['visitid'])) {
@@ -140,9 +156,10 @@ function nnels_stats_calsauthen_login_result($result, $uid = NULL, $orgid = NULL
 		  'authen_result' => $result,
 		  'ip_address' => $_SERVER['REMOTE_ADDR'],
 		  'session_id' => session_id(),
+		  'login_page' => $_SESSION['nnels_stats']['login_page'],
 		);
 	  drupal_set_message("WOOPS, no visitid, Dave will address!");
-	  dpm($_SESSION['nnels_stats']);
+	  //dpm($_SESSION['nnels_stats']);
 	}
 	else  _nnels_update_visit($arr, $result, $uid);
 
@@ -161,15 +178,17 @@ function nnels_stats_calsauthen_login_result($result, $uid = NULL, $orgid = NULL
  *   lots to do here, like lots
  */
 function _nnels_stats_tracker() {
+	global $user;
+  if( !in_array("patron", $user->roles) && !in_array("anonymous user", $user->roles) )  return;
 
-  global $user;
-  if( !in_array("patron", $user->roles) && !in_array("anonymous user", $user->roles) ) return;
 	$ip = $_SERVER['REMOTE_ADDR'];
+	
+	
 	//does the session exist?  
   $session_exists = (isset($_SESSION['nnels_stats']) ) ? TRUE : FALSE;
   //get the referring URL
   $ref = nnels_stats_get_referrer();
-	
+  
 	$orgid = 0;
 	//referring url types: 1 = blank / direct; 2 = external (not partner); 3 = referring (partner); 4 = site?
 	//5 = org search
@@ -181,24 +200,23 @@ function _nnels_stats_tracker() {
 	else {
 	  $referring_url_type = $tmp;
 	}
-	
+
 	_nnels_stats_kill_session($referring_url_type, $user, $session_exists);
 	//&& $session_exists === FALSE && $user->uid > 0
   if ($session_exists && $_SESSION['nnels_stats']['$referring_url_type'] == 4) {
     return;
   }
 
-	
 	if($orgid == 0) $orgid = _nnels_stats_set_orgid();
 	//logged in user coming from other site
-	if($user->uid > 0 && $referring_url_type != 4 && $referring_url_type != 5) {
+	if($user->uid > 0 && $referring_url_type != 4) {
 	  $visitid = _nnels_stats_add_visit_loggedin($user, $ref, $referring_url_type, $ip);
 		//return;
 	}	
 	//$session_exists === FALSE || referring URL is not site based 
 	//|| $referring_url_type != 4
 	
-  if($user->uid == 0 && (empty($_SESSION['nnels_stats']['visitid']) ) ) {
+  if($user->uid == 0 && (empty($_SESSION['nnels_stats']) ) ) {
 	  _nnels_stats_set_session($user, $orgid, $ref, $referring_url_type, $ip);
 		$session_exists = TRUE;  
 	 	$visitid = $_SESSION['nnels_stats']['visitid'];
@@ -278,6 +296,7 @@ function _nnels_stats_add_visit_loggedin($account, $ref, $referring_url_type, $i
 	  'session_id' => session_id(),
 	  'ip_address' => $ip,
 	);
+	//dpm($arr);
 	_nnels_add_visit($arr);
 
 }
@@ -304,8 +323,9 @@ function _nnels_stats_set_session($account, $orgid, $ref, $referring_url_type, $
 	  'authen_result' => 0,
 	  'ip_address' => $ip,
 	  'session_id' => session_id(),
+	  'visitid' => 0,
 	);
-	$arr['visitid'] = _nnels_add_visit($arr);
+	if($orgid > 0) $arr['visitid'] = _nnels_add_visit($arr);
 	//start the session w/ a new visitid
 	$_SESSION['nnels_stats'] = $arr;
  
@@ -331,19 +351,23 @@ function _nnels_stats_delete_nonpartners() {
  *   
  */
 function _nnels_add_visit($arr) {
-	dpm($arr);
-	$visitid = db_insert('nnels_stats')
-	  ->fields(array(
-	    'new_user' => $arr['new_user'],
-	    'authen_result' => $arr['authen_result'],
-	    'orgid' => $arr['orgid'],
-	    'referring_url_type' => $arr['referring_url_type'],
-	    'created' => REQUEST_TIME,
-	    'session_id' => $arr['session_id'],
-	    'ip_address' => $arr['ip_address'],
-	  ))
-	  ->execute();
-  return $visitid;
+	//dpm($arr);
+	if($arr['orgid'] > 0) {
+		$visitid = db_insert('nnels_stats')
+		  ->fields(array(
+		    'new_user' => $arr['new_user'],
+		    'authen_result' => $arr['authen_result'],
+		    'orgid' => $arr['orgid'],
+		    'referring_url_type' => $arr['referring_url_type'],
+		    'created' => REQUEST_TIME,
+		    'session_id' => $arr['session_id'],
+		    'ip_address' => $arr['ip_address'],
+		  ))
+		  ->execute();
+	  return $visitid;
+	
+	}
+	return NULL;
  
 }
 
@@ -365,13 +389,9 @@ function _nnels_add_visit($arr) {
 
 
 function _nnels_update_visit($arr, $result, $uid) {
-  if(empty($arr['visitid'])) {
-  
-  
-  }
-
 	if(!empty($arr['visitid']) ) {
-		if($arr['orgid'] == 0) $arr['orgid'] = nnels_stats_get_org_by_uid($uid);
+		if($arr['orgid'] == 0 || empty($arr['orgid']) ) $arr['orgid'] = nnels_stats_get_org_by_uid($uid);
+		
 		$num_updated = db_update('nnels_stats') 
 		  ->fields(array(
 		  	'new_user' => $arr['new_user'],
