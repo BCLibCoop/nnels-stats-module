@@ -1,7 +1,7 @@
 <?php
 /**
  * @file
- * Install, update and uninstall functions for the cals external search module.
+ * Install, update and uninstall functions for the nnels visits module.
  */
 
 
@@ -15,22 +15,7 @@ function nnels_stats_enable() {
     ->condition('name', 'nnels_stats')
     ->execute();
 }
-      /* 
-      'authen_success' => array(
-        'type' => 'int',
-        'unsigned' => TRUE,
-        'not null' => TRUE,
-        'default' => 0,
-        'description' => t("Whether or not the login / registration attempt was successful: 0 = false; 1 = true."),
- 
-      'authen_failure_reason' => array(
-        'type' => 'int',
-        'unsigned' => TRUE,
-        'not null' => TRUE,
-        'default' => 0,
-        'description' => t("Enumeration of xxxx."),
-      ),
-      */
+
 /**
  * Implements hook_schema().
  */

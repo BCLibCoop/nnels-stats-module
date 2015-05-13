@@ -5,3 +5,4 @@ package = --CALS
 files[] = views/handlers/nnels_stats_views_handler_field_url_type.inc
 files[] = views/handlers/nnels_stats_views_handler_authentication_results.inc
 dependencies[] = calsauthen
+dependencies[] = legal

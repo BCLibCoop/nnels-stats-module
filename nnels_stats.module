@@ -19,9 +19,6 @@ function nnels_stats_menu() {
   */
   return $items;
 }
-
-
-
 /**
  * Implements hook_exit().
  */
@@ -48,23 +45,13 @@ function nnels_stats_views_api() {
 }
 
 /**
- * Implements hook_user_logout(). Not currently implemented
- */
-function nnels_stats_user_logoutxxxx($account) {
-
-}
-
-/**
  * Implements hook_form_alter()
  */
 function nnels_stats_form_alter(&$form, &$form_state, $form_id) {
-
-  if($form_id == 'legal_login') {
-    $form['#submit'][] = nnels_stats_new_registration_submit;
-  }
-
-  
+  //hook into legal module
+  if($form_id == 'legal_login') $form['#submit'][] = nnels_stats_new_registration_submit;
 }
+
 /**
  * Commits new registration to the nnels_stats table
  */
@@ -87,7 +74,6 @@ function nnels_stats_new_registration_submit($form, &$form_state) {
     //successful registration, update db and unset session
     _nnels_update_visit($arr, 1, $account->uid);  
     unset($_SESSION['nnels_stats']);
-		dpm(__FUNCTION__ . ": added new registration");
   }		
 }
 
@@ -100,7 +86,6 @@ function nnels_stats_new_registration_submit($form, &$form_state) {
  *   See views/handlers/nnels_stats_views_handler_authentication_results.inc for other enumerations 
  */
 function nnels_stats_calsauthen_login_result($result, $uid = NULL, $orgid = NULL) {
-	dpm(__FUNCTION__);
 	$update = 1;
   if(!isset($_SESSION['nnels_stats']['visitid'])) {
     $ref_type = (isset($_SESSION['nnels_stats']['referring_url_type'])) ? $_SESSION['nnels_stats']['referring_url_type'] : 4;
@@ -111,7 +96,6 @@ function nnels_stats_calsauthen_login_result($result, $uid = NULL, $orgid = NULL
 	  $arr = $_SESSION['nnels_stats'];
 	  _nnels_update_visit($arr, $result, $uid);
   }
-  dpm("result = $result | uid = $uid | orgid = $orgid");
   //if successful login, unset the session variable; otherwise, reset the session with a new db insert
   if ($result == 1) unset($_SESSION['nnels_stats']); 
   else  _nnels_stats_reset_session_failed_login($arr, $uid);
@@ -148,7 +132,6 @@ function _nnels_stats_tracker() {
   } 
 
   if ($session_exists && $_SESSION['nnels_stats']['ref_type'] == 4) {
-    dpm("SESSION EXISTS, BUT REFERRING URL TYPE = 4");
     return;
   }
 
@@ -269,7 +252,6 @@ function _nnels_stats_delete_nonpartners() {
  *  the primary key from the db insert
  */
 function _nnels_add_visit($arr) {
-  //dpm($arr);
   if($arr['orgid'] > 0) {
     $visitid = db_insert('nnels_stats')
       ->fields(array(
@@ -343,7 +325,6 @@ function _nnels_stats_get_org_by_referring_url($referring_url) {
     WHERE setting_name = :setting_name AND :referring_url_value REGEXP setting_value",
     array(':setting_name' => 'referring_url', ':referring_url_value' => $referring_url)
   )->fetchField();  
-  drupal_set_message("NID = $nid | referring_url = $referring_url");
   if(!$nid) $nid = 0; 
   return $nid;  
 }
@@ -418,7 +399,7 @@ function nnels_stats_get_referrer() {
 }
 
 /**
- * Implements hook_entity_info().
+ * Implements hook_entity_info(). Not currently implemented.
  */
 function nnels_stats_entity_info() {
 
