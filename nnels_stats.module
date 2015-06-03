@@ -49,26 +49,17 @@ function nnels_stats_views_api() {
  */
 function nnels_stats_form_alter(&$form, &$form_state, $form_id) {
   //hook into legal module
-  if($form_id == 'legal_login') {
-    $form['#submit'][] = nnels_stats_new_registration_submit;
-  }  
+  if($form_id == 'legal_login') $form['#submit'][] = nnels_stats_new_registration_submit;
 }
-
-
 
 /**
  * Commits new registration to the nnels_stats table
  */
 function nnels_stats_new_registration_submit($form, &$form_state) {
 	//check to see if there's a session array; if not, rebuild w/ uid from legal module.	
-	$rebuild = 0;
-	if ( !isset($_SESSION['nnels_stats']['orgid']) || 
-	     !isset($_SESSION['nnels_stats']['visitid']) || 
-	     $_SESSION['nnels_stats']['orgid'] == 0  || 
-	     $_SESSION['nnels_stats']['visitid'] == 0 ) $rebuild = 1;
-	
 	//if rebuild = 1     
-  if($form_state['values']['legal_accept'] == 1 && $rebuild = 1 ) {
+  if( $form_state['values']['legal_accept'] == 1 && 
+  	( empty($_SESSION['nnels_stats']['orgid']) || empty($_SESSION['nnels_stats']['visitid']) ) ) {
   	$uid = $form_state['values']['uid'];
   	$account = user_load($uid);
   	$orgid = nnels_stats_get_org_by_uid($uid);
