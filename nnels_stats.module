@@ -49,23 +49,32 @@ function nnels_stats_views_api() {
  */
 function nnels_stats_form_alter(&$form, &$form_state, $form_id) {
   //hook into legal module
-  if($form_id == 'legal_login') $form['#submit'][] = nnels_stats_new_registration_submit;
+  if($form_id == 'legal_login') {
+    $form['#submit'][] = nnels_stats_new_registration_submit;
+  }  
 }
+
+
 
 /**
  * Commits new registration to the nnels_stats table
  */
 function nnels_stats_new_registration_submit($form, &$form_state) {
-  if(empty($_SESSION['nnels_stats']) || empty($_SESSION['nnels_stats']['visitid'])) {
-    $orgid =  (isset($_SESSION['calsauthen_target_organization'])) ? 
-      _nnels_stats_get_orgid_from_calsauthen() : 
-      nnels_stats_get_org_by_uid($uid);
-    //rebuild session
-    _nnels_stats_build_session($account->uid, $orgid, 1, 4); //let's assume direct link.
+	//check to see if there's a session array; if not, rebuild w/ uid from legal module.	
+	$rebuild = 0;
+	if ( !isset($_SESSION['nnels_stats']['orgid']) || 
+	     !isset($_SESSION['nnels_stats']['visitid']) || 
+	     $_SESSION['nnels_stats']['orgid'] == 0  || 
+	     $_SESSION['nnels_stats']['visitid'] == 0 ) $rebuild = 1;
+	
+	//if rebuild = 1     
+  if($form_state['values']['legal_accept'] == 1 && $rebuild = 1 ) {
+  	$uid = $form_state['values']['uid'];
+  	$account = user_load($uid);
+  	$orgid = nnels_stats_get_org_by_uid($uid);
+  	_nnels_stats_build_session($uid, $orgid, 1, 4); 
   }   
   $arr = $_SESSION['nnels_stats'];
-  if(empty($arr['orgid'])) $arr['orgid'] = $_SESSION['calsauthen_target_organization']; //just to be certain we're getting the orgid  
-  
   if(!empty($arr['visitid']) && $arr['visitid'] > 0 ) {
     $arr['new_user'] = 1; // this is a new user!
     $arr['authen_result'] = 1;
@@ -123,7 +132,6 @@ function _nnels_stats_tracker() {
   else {
     $ref_type = $tmp;
   }
-  
   _nnels_stats_kill_session($ref_type, $user, $session_exists); //kill old sessions
   
   if($user->uid > 0 && $ref_type != 4) { //logged in user coming from other site
@@ -228,8 +236,10 @@ function _nnels_stats_build_session($uid, $orgid, $result, $ref_type) {
 	$arr['new_user'] = 0;
 	$arr['authen_result'] = $result;
 	$arr['session_id'] = session_id();
-	$arr['referrer'] = nnels_stats_get_referrer();
-	$arr['login_page'] =  nnels_stats_get_referrer();
+	$referrer = truncate_utf8(nnels_stats_get_referrer(), 250, FALSE, FALSE, 0);
+	if(strpos($referrer, "legal_accept")) $referrer = "legal_accept"; //the legal module injects the UID, so let's strip out.
+	$arr['referrer'] = $referrer;
+	$arr['login_page'] =  $referrer;
 	if($orgid > 0) $arr['visitid'] = _nnels_add_visit($arr);
 	//copy array to session var	
 	$_SESSION['nnels_stats'] = $arr;
