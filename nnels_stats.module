@@ -23,7 +23,7 @@ function nnels_stats_menu() {
  * Implements hook_exit().
  */
 function nnels_stats_exit() {
-  $ips = array('10.77.110.14', '66.249.79.117'); // google or some other spider??
+  $ips = array('10.77.110.14', '66.249.79.117'); // nnels, google &/or some other spider??
   $ip = $_SERVER['REMOTE_ADDR'];
   if(!in_array($ip, $ips) && 
     strpos($ip, '180.76') === FALSE && 
@@ -86,6 +86,10 @@ function nnels_stats_new_registration_submit($form, &$form_state) {
  *   See views/handlers/nnels_stats_views_handler_authentication_results.inc for other enumerations 
  */
 function nnels_stats_calsauthen_login_result($result, $uid = NULL, $orgid = NULL) {
+	
+	//return when NNELS' connector tests login to site: https://github.com/BCLibCoop/nnels/issues/77
+  if($_SERVER['REMOTE_ADDR'] == '10.77.110.14') return;   
+
 	$update = 1;
   if(!isset($_SESSION['nnels_stats']['visitid'])) {
     $ref_type = (isset($_SESSION['nnels_stats']['referring_url_type'])) ? $_SESSION['nnels_stats']['referring_url_type'] : 4;
