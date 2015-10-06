@@ -23,9 +23,10 @@ function nnels_stats_menu() {
  * Implements hook_exit().
  */
 function nnels_stats_exit() {
-  $ips = array('10.77.110.14', '66.249.79.117'); // nnels, google &/or some other spider??
+  $ips = array('10.77.110.14', '10.77.110.15', '66.249.79.117'); // nnels, google &/or some other spider??
   $ip = $_SERVER['REMOTE_ADDR'];
   if(!in_array($ip, $ips) && 
+    strpos($ip, '10.77.110') === FALSE &&
     strpos($ip, '180.76') === FALSE && 
     strpos($ip, '66.249.79') === FALSE && 
     strpos($ip, '123.125.') === FALSE && 
@@ -127,10 +128,13 @@ function _nnels_stats_tracker() {
   else {
     $ref_type = $tmp;
   }
+  dpm($user->uid);
+  dpm("REF TYPE: " . $ref_type);
   _nnels_stats_kill_session($ref_type, $user, $session_exists); //kill old sessions
   
   if($user->uid > 0 && $ref_type != 4) { //logged in user coming from other site
     _nnels_stats_add_visit_loggedin($user, $ref, $ref_type, $ip);
+    dpm("ALREADY LOGGED IN");
     return;
   } 
 
