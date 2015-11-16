@@ -152,12 +152,14 @@ function nnels_stats_calsauthen_login_result($result, $uid = NULL, $orgid = NULL
   if(!isset($_SESSION['nnels_stats']['visitid'])) {
     $ref_type = (isset($_SESSION['nnels_stats']['referring_url_type'])) ? $_SESSION['nnels_stats']['referring_url_type'] : 4;
     _nnels_stats_build_session($uid, $orgid, $result, $ref_type);
+    $arr = $_SESSION['nnels_stats'];
   }
   else { //this is what we would normally expect
 	  $_SESSION['nnels_stats']['login_page'] =  nnels_stats_get_referrer(); //page the user logged in via
 	  $arr = $_SESSION['nnels_stats'];
 	  _nnels_update_visit($arr, $result, $uid);
   }
+  
   //if successful login, unset the session variable; otherwise, reset the session with a new db insert
   if ($result == 1) unset($_SESSION['nnels_stats']); 
   else  _nnels_stats_reset_session_failed_login($arr, $uid);
