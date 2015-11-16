@@ -51,6 +51,63 @@ function nnels_stats_views_api() {
 function nnels_stats_form_alter(&$form, &$form_state, $form_id) {
   //hook into legal module
   if($form_id == 'legal_login') $form['#submit'][] = nnels_stats_new_registration_submit;
+
+  if($form_id == 'views_exposed_form' && isset($form['new_user']) ) {
+
+    $k = 'new_user';
+    $form[$k]['#type'] = 'select';
+    $form[$k]['#options'] = array('' => 'Any', 0 => "existing user", 1 => "new user" );
+    $form[$k]['#default_value'] = '';
+    $form[$k]['#size'] = 1;
+
+
+    $options = array(
+      '' => 'any',
+      0 => 'successfull',
+      1 => 'unknown username',
+      2 => 'bad password',
+      3 => 'invalid patron type',
+      4 => 'blocked account',
+      5 => 'already logged in');
+    $k = 'authen_result';
+    $form[$k]['#type'] = 'select';
+    $form[$k]['#options'] = $options;
+    $form[$k]['#default_value'] = '';
+    $form[$k]['#size'] = 1;
+    $form[$k]['#description'] = '';
+
+    $options = array(
+      '' => 'any',
+      'ab' => 'Alberta',
+      'bc' => 'British Columbia',
+      'mb' => 'Manitoba',);
+    $k = 'field_address_administrative_area';
+    $form[$k]['#type'] = 'select';
+    $form[$k]['#options'] = $options;
+    $form[$k]['#default_value'] = '';
+    $form[$k]['#size'] = 1;
+    $form[$k]['#description'] = '';
+
+    $options = array(
+      '' => 'Any',
+      1 => 'Direct Link',
+      2 => 'External URL',
+      3 => 'Referring URL',
+      4 => 'Onsite Link'
+    );
+    $k = 'referring_url_type';
+    $form[$k]['#type'] = 'select';
+    $form[$k]['#options'] = $options;
+    $form[$k]['#default_value'] = '';
+    $form[$k]['#size'] = 1;
+    $form[$k]['#description'] = '';
+
+
+
+  }
+
+
+
 }
 
 /**
