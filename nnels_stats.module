@@ -76,18 +76,25 @@ function nnels_stats_form_alter(&$form, &$form_state, $form_id) {
     $form[$k]['#size'] = 1;
     $form[$k]['#description'] = '';
 
-    $options = array(
+    //province selector
+    $k = 'field_address_administrative_area';
+
+    if(function_exists("addressfield_get_administrative_areas")) $options = addressfield_get_administrative_areas("CA");
+    else 
+      $options = array(
       '' => 'any',
       'ab' => 'Alberta',
       'bc' => 'British Columbia',
       'mb' => 'Manitoba',);
-    $k = 'field_address_administrative_area';
+
     $form[$k]['#type'] = 'select';
     $form[$k]['#options'] = $options;
     $form[$k]['#default_value'] = '';
-    $form[$k]['#size'] = 1;
+    $form[$k]['#multiple'] = TRUE;
+    $form[$k]['#size'] = 5;
     $form[$k]['#description'] = '';
-
+    
+    
     $options = array(
       '' => 'Any',
       1 => 'Direct Link',
@@ -101,13 +108,7 @@ function nnels_stats_form_alter(&$form, &$form_state, $form_id) {
     $form[$k]['#default_value'] = '';
     $form[$k]['#size'] = 1;
     $form[$k]['#description'] = '';
-
-
-
   }
-
-
-
 }
 
 /**
