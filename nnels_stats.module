@@ -188,8 +188,8 @@ function _nnels_stats_tracker() {
   else {
     $ref_type = $tmp;
   }
-  dpm($user->uid);
-  dpm("REF TYPE: " . $ref_type);
+//  dpm($user->uid);
+//  dpm("REF TYPE: " . $ref_type);
   _nnels_stats_kill_session($ref_type, $user, $session_exists); //kill old sessions
   
   if($user->uid > 0 && $ref_type != 4) { //logged in user coming from other site
